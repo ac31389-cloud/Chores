@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Today's Chores!</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: #fef9f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px 48px;
+    }
+
+    header { text-align: center; margin-bottom: 28px; }
+
+    .day-label {
+      font-size: 13px; font-weight: 700; letter-spacing: .12em;
+      text-transform: uppercase; color: #78716c; margin-bottom: 4px;
+    }
+    .kid-name { font-size: 2.2rem; font-weight: 900; line-height: 1; margin-bottom: 6px; }
+    .tagline { font-size: 1rem; color: #78716c; font-weight: 700; }
+
+    .chore-list { width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 10px; }
+
+    .section-label {
+      font-size: .75rem; font-weight: 900; letter-spacing: .1em;
+      text-transform: uppercase; color: #a8a29e; margin-top: 12px; margin-bottom: 2px;
+      padding-left: 4px;
+    }
+
+    .chore-card {
+      background: #fff; border: 2px solid #f0e6d0; border-radius: 16px;
+      padding: 14px 16px; display: flex; align-items: flex-start; gap: 14px;
+      cursor: pointer; transition: transform .1s, background .2s, border-color .2s;
+      user-select: none; -webkit-tap-highlight-color: transparent;
+    }
+    .chore-card:active { transform: scale(.97); }
+    .chore-card.done { background: #f0fdf4; border-color: #bbf7d0; }
+
+    .chore-icon { font-size: 1.5rem; min-width: 36px; text-align: center; line-height: 1.4; }
+
+    .chore-text { flex: 1; }
+    .chore-title { font-size: 1rem; font-weight: 900; color: #1c1917; line-height: 1.3; }
+    .chore-card.done .chore-title { text-decoration: line-through; color: #a8a29e; }
+    .chore-hint { font-size: .78rem; color: #78716c; margin-top: 3px; font-weight: 700; line-height: 1.4; }
+
+    .check {
+      width: 28px; height: 28px; border-radius: 50%;
+      border: 2.5px solid #e7e5e4; display: flex; align-items: center;
+      justify-content: center; font-size: 1rem; flex-shrink: 0;
+      margin-top: 2px; transition: background .2s, border-color .2s;
+    }
+    .chore-card.done .check { background: #22c55e; border-color: #22c55e; color: #fff; }
+
+    .progress-wrap { width: 100%; max-width: 460px; margin-top: 24px; text-align: center; }
+    .progress-bar-bg { background: #f0e6d0; border-radius: 99px; height: 12px; overflow: hidden; margin-bottom: 8px; }
+    .progress-bar-fill { height: 100%; border-radius: 99px; background: #22c55e; transition: width .4s; }
+    .progress-label { font-size: .9rem; font-weight: 700; color: #78716c; }
+
+    .all-done-banner {
+      display: none; margin-top: 24px; background: #22c55e; color: #fff;
+      border-radius: 18px; padding: 20px 24px; text-align: center;
+      font-size: 1.2rem; font-weight: 900; max-width: 460px; width: 100%;
+      animation: pop .3s cubic-bezier(.4,0,.2,1);
+    }
+    @keyframes pop { from { transform: scale(.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    .unknown { margin-top: 60px; text-align: center; color: #78716c; font-size: 1.1rem; font-weight: 700; }
+  </style>
+</head>
+<body>
+<header>
+  <div class="day-label" id="dayLabel"></div>
+  <div class="kid-name" id="kidName"></div>
+  <div class="tagline" id="tagline"></div>
+</header>
+<div class="chore-list" id="choreList"></div>
+<div class="progress-wrap" id="progressWrap" style="display:none">
+  <div class="progress-bar-bg"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
+  <div class="progress-label" id="progressLabel"></div>
+</div>
+<div class="all-done-banner" id="allDoneBanner">🎉 All done! Amazing work today!</div>
+<div class="unknown" id="unknownMsg" style="display:none">Hmm, we don't know whose sticker this is.<br>Ask a grown-up to check the link!</div>
+
+<script>
+// ── CHORE DATA ──────────────────────────────────────────────────────────────
+// Each chore: { icon, title, hint (optional), group (optional section label) }
+
+const KIDS = {
+  celeste: {
+    name: "Celeste",
+    color: "#f97316",
+    chores: {
+      monday: [
+        { group: "Trash & Cat" },
+        { icon:"🗑️", title:"Get trash from your bedroom, kids bathroom, laundry room, master" },
+        { icon:"🗑️", title:"Replace trash bag in master" },
+        { icon:"🗑️", title:"Get trash from backyard bar bins and kitchen" },
+        { icon:"🧹", title:"Clean kitchen bins (weekly)", hint:"Wipe inside and out" },
+        { icon:"🚛", title:"Take bins to the street" },
+        { icon:"💧", title:"Clean Izzy's water container and replace with fresh water" },
+        { icon:"🧽", title:"Clean Izzy's food container outside with damp cloth" },
+        { icon:"🐱", title:"Replace litter, wipe litter box inside and out, clean it out" },
+      ],
+      tuesday: [
+        { group: "Trash Bins" },
+        { icon:"🗑️", title:"Bring trash bins back in" },
+        { group: "Dust" },
+        { icon:"🪶", title:"Gently wipe bottles with damp cloth" },
+        { icon:"🪶", title:"Use feather duster on wine rack below" },
+        { icon:"🧹", title:"Remove all from top of bar, dust with Pledge" },
+        { icon:"🧹", title:"Remove everything and wipe down with Pledge" },
+        { icon:"📺", title:"Dust TV with feather duster" },
+        { icon:"🪟", title:"Dust all window sills in kitchen and living rooms" },
+        { icon:"🐦", title:"Dust birds" },
+        { icon:"🧹", title:"Dust white hall table top and bottom with Pledge" },
+      ],
+      wednesday: [
+        { group: "Bathroom" },
+        { icon:"🛁", title:"Clean towels, rugs, and shower curtain liner" },
+        { icon:"🧽", title:"Clean counter, sink and drain" },
+        { icon:"🚽", title:"Clean toilet top to bottom, inside and under rim" },
+        { icon:"🧹", title:"Sweep bathroom" },
+        { icon:"🫧", title:"Remove EVERYTHING from floor, then clean floor" },
+        { icon:"🪣", title:"Clean out mop bucket when done, put back" },
+        { icon:"🛁", title:"Put towels away" },
+      ],
+      thursday: [
+        { group: "Kitchen" },
+        { icon:"🧽", title:"Wipe all cabinets and drawers with soapy cloth" },
+        { icon:"🧽", title:"Remove everything from counter, clean with soap and water, wipe items, put back — repeat per counter" },
+        { icon:"📦", title:"Clean microwave: remove glass, clean both sides at sink, clean inside with same cloth" },
+        { icon:"🍳", title:"Wipe out bottom of oven and front glass (no glass cleaner)" },
+        { icon:"🍳", title:"Wipe down stove" },
+        { icon:"🍎", title:"Check fruit bowl, throw out anything bad" },
+        { icon:"🚰", title:"Clean sink with powder, wipe out and dry" },
+        { icon:"🧈", title:"Fill butter and salt" },
+        { icon:"🌬️", title:"Clean air fryer" },
+        { group: "Guest Bathroom" },
+        { icon:"🧻", title:"Replenish paper towels, wipes, and toilet paper" },
+        { icon:"🪞", title:"Clean mirror with microfiber and Windex" },
+        { icon:"💧", title:"Wipe out sinks and faucet, then dry" },
+      ],
+      friday: [
+        { group: "Your Laundry" },
+        { icon:"🧺", title:"Do your laundry" },
+      ],
+      saturday: [
+        { group: "Outside — Remove Suckers on Trees" },
+        { icon:"🌳", title:"Remove suckers on trees" },
+        { group: "Your Room" },
+        { icon:"🛏️", title:"Vacuum under bed" },
+        { icon:"🪟", title:"Dust blinds" },
+        { icon:"🗂️", title:"Clear off tops of desk and dresser" },
+        { icon:"👟", title:"Nothing left on floor; all shoes organised in closet" },
+        { icon:"🎒", title:"Get clothes ready for school on Monday" },
+      ],
+      sunday: [],
+    }
+  },
+
+  ari: {
+    name: "Ari",
+    color: "#3b82f6",
+    chores: {
+      monday: [
+        { group: "Kitchen" },
+        { icon:"🧽", title:"Wipe all cabinets and drawers with soapy cloth" },
+        { icon:"🧽", title:"Remove everything from counter, clean with soap and water, wipe items, put back — repeat per counter" },
+        { icon:"📦", title:"Clean microwave: remove glass, clean both sides at sink, clean inside with same cloth" },
+        { icon:"🍳", title:"Wipe out bottom of oven and front glass (no glass cleaner)" },
+        { icon:"🍳", title:"Wipe down stove" },
+        { icon:"🍎", title:"Check fruit bowl, throw out anything bad" },
+        { icon:"🚰", title:"Clean sink with power, wipe out and dry" },
+        { icon:"🧈", title:"Fill butter and salt" },
+        { icon:"🌬️", title:"Clean air fryer" },
+        { group: "Guest Bathroom" },
+        { icon:"🧻", title:"Replenish paper towels, wipes, and toilet paper" },
+        { icon:"🪞", title:"Clean mirror with microfiber and Windex" },
+        { icon:"💧", title:"Wipe out sinks and faucet, then dry" },
+      ],
+      tuesday: [
+        { group: "Your Laundry" },
+        { icon:"🧺", title:"Do your laundry" },
+      ],
+      wednesday: [
+        { group: "Sweep Trash Area" },
+        { icon:"🧹", title:"Sweep the trash area" },
+      ],
+      thursday: [
+        { group: "Outside" },
+        { icon:"🔥", title:"Wipe down firepit living area" },
+        { icon:"🪑", title:"Wipe down patio table" },
+        { icon:"🪑", title:"Dust chairs" },
+        { icon:"🏊", title:"Brush down pool" },
+      ],
+      friday: [
+        { group: "Outside" },
+        { icon:"🔥", title:"Wipe down firepit living area" },
+        { icon:"🪑", title:"Wipe down patio table" },
+        { icon:"🪑", title:"Dust chairs" },
+        { icon:"🏊", title:"Brush down pool" },
+        { group: "Dust" },
+        { icon:"🪑", title:"Wipe and Pledge the dining table including chairs" },
+        { icon:"📺", title:"Dust all 7 TVs with feather duster" },
+        { icon:"🪟", title:"Dust all window sills in kitchen with feather duster" },
+      ],
+      saturday: [
+        { group: "Bathroom" },
+        { icon:"🛁", title:"Clean towels, rugs, and shower curtain liner" },
+        { icon:"🧽", title:"Clean counter, sink and drain" },
+        { icon:"🚽", title:"Clean toilet top to bottom, inside and under rim" },
+        { icon:"🧹", title:"Sweep bathroom" },
+        { icon:"🫧", title:"Remove EVERYTHING from floor, then clean floor" },
+        { icon:"🪣", title:"Clean out mop bucket when done, put back" },
+        { icon:"🛁", title:"Put towels away" },
+      ],
+      sunday: [
+        { group: "Your Room" },
+        { icon:"🛏️", title:"Vacuum under bed" },
+        { icon:"🪟", title:"Dust blinds" },
+        { icon:"🗂️", title:"Clear off tops of desk and dresser" },
+        { icon:"👟", title:"Nothing left on floor; all shoes organised in closet" },
+        { icon:"🎒", title:"Get clothes ready for school on Monday" },
+      ],
+    }
+  },
+
+  marshall: {
+    name: "Marshall",
+    color: "#a855f7",
+    chores: {
+      monday: [
+        { icon:"🍽️", title:"Unload dishwasher" },
+        { icon:"🧹", title:"Vacuum living room" },
+      ],
+      tuesday: [
+        { icon:"🍽️", title:"Unload dishwasher" },
+        { icon:"🧹", title:"Vacuum bedrooms" },
+      ],
+      wednesday: [
+        { icon:"🍽️", title:"Unload dishwasher" },
+        { icon:"🧹", title:"Vacuum kitchen" },
+        { group: "London & Gym" },
+        { icon:"🐶", title:"Clean London's food bowls and put back" },
+        { icon:"💪", title:"Dust everything in the gym" },
+      ],
+      thursday: [
+        { icon:"🍽️", title:"Unload dishwasher" },
+        { icon:"🧹", title:"Vacuum front room" },
+      ],
+      friday: [
+        { icon:"🍽️", title:"Unload dishwasher" },
+        { icon:"🧺", title:"Wash all rugs" },
+      ],
+      saturday: [
+        { icon:"🎨", title:"Ceramics class" },
+        { icon:"🍽️", title:"Unload dishwasher" },
+        { icon:"🌐", title:"Webber" },
+      ],
+      sunday: [
+        { icon:"🧺", title:"Your laundry" },
+        { icon:"🍽️", title:"Unload dishwasher" },
+        { group: "Outside" },
+        { icon:"🔥", title:"Wipe down firepit living area" },
+        { icon:"🪑", title:"Wipe down patio table" },
+        { icon:"🪑", title:"Dust chairs" },
+        { icon:"🏊", title:"Brush down pool" },
+        { icon:"📱", title:"Text mom that chore started", hint:"Send text when you begin" },
+        { icon:"✅", title:"Text mom that chore is completed", hint:"Send text when all done" },
+      ],
+    }
+  }
+};
+
+// ── APP LOGIC ────────────────────────────────────────────────────────────────
+const DAYS = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
+const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+
+function getParam(name) {
+  return new URLSearchParams(window.location.search).get(name);
+}
+function storageKey(kidKey) {
+  return `chores_${kidKey}_${new Date().toISOString().slice(0,10)}`;
+}
+function loadDone(key) {
+  try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; }
+}
+function saveDone(key, arr) {
+  localStorage.setItem(key, JSON.stringify(arr));
+}
+
+function render() {
+  const kidKey = (getParam('kid') || '').toLowerCase();
+  const kid = KIDS[kidKey];
+
+  if (!kid) {
+    document.getElementById('unknownMsg').style.display = 'block';
+    return;
+  }
+
+  const dayIndex = new Date().getDay();
+  const dayName = DAYS[dayIndex];
+  const allItems = kid.chores[dayName] || [];
+  // Only chores (not group headers) get a checkbox
+  const chores = allItems.filter(c => c.icon);
+
+  document.getElementById('dayLabel').textContent = DAY_NAMES[dayIndex];
+  const nameEl = document.getElementById('kidName');
+  nameEl.textContent = kid.name + "'s Chores";
+  nameEl.style.color = kid.color;
+  document.getElementById('tagline').textContent = chores.length === 0
+    ? "Nothing today — enjoy your free day! 🎉"
+    : ["Let's crush it today! 💪","You've got this! ⭐","Time to shine! ✨","Be the helper hero! 🦸"][Math.floor(Math.random()*4)];
+  document.title = kid.name + "'s Chores – " + DAY_NAMES[dayIndex];
+
+  if (chores.length === 0) return;
+
+  const key = storageKey(kidKey);
+  let done = loadDone(key);
+
+  // Build index map: chore index within chores[] -> position in allItems[]
+  let choreIndex = 0;
+  const list = document.getElementById('choreList');
+  list.innerHTML = '';
+
+  allItems.forEach(item => {
+    if (item.group !== undefined) {
+      const label = document.createElement('div');
+      label.className = 'section-label';
+      label.textContent = item.group;
+      list.appendChild(label);
+      return;
+    }
+    const ci = choreIndex++;
+    const card = document.createElement('div');
+    card.className = 'chore-card' + (done.includes(ci) ? ' done' : '');
+    card.innerHTML = `
+      <div class="chore-icon">${item.icon}</div>
+      <div class="chore-text">
+        <div class="chore-title">${item.title}</div>
+        ${item.hint ? `<div class="chore-hint">${item.hint}</div>` : ''}
+      </div>
+      <div class="check">${done.includes(ci) ? '✓' : ''}</div>
+    `;
+    card.addEventListener('click', () => {
+      done = done.includes(ci) ? done.filter(x => x !== ci) : [...done, ci];
+      saveDone(key, done);
+      render();
+    });
+    list.appendChild(card);
+  });
+
+  document.getElementById('progressWrap').style.display = 'block';
+  document.getElementById('progressFill').style.background = kid.color;
+  const pct = Math.round((done.length / chores.length) * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = done.length + ' of ' + chores.length + ' done';
+  document.getElementById('allDoneBanner').style.display = done.length === chores.length ? 'block' : 'none';
+}
+
+render();
+</script>
+</body>
+</html>
